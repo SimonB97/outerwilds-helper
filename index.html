@@ -83,9 +83,26 @@
                     <input id="file-upload" type="file" class="hidden" accept=".owsave" />
                 </label>
             </div>
-             <div class="mt-4 text-center">
-                <p class="text-xs text-gray-500">Your save file is usually located at:</p>
-                <p class="text-xs text-gray-500"><code class="bg-gray-700 p-1 rounded-md">%APPDATA%\Annapurna Interactive\Outer Wilds\Saves\[YourSteamID]\</code></p>
+             <div class="mt-4">
+                <p class="text-xs text-gray-500 text-center mb-3">Your save file is usually located at:</p>
+                <div class="space-y-2 text-xs text-gray-500">
+                    <div class="bg-gray-700/30 p-3 rounded-lg">
+                        <p class="font-semibold text-gray-400 mb-1">Microsoft Store:</p>
+                        <code class="bg-gray-700 p-1 rounded-md break-all">%LOCALAPPDATA%\Packages\AnnapurnaInteractive.OuterWilds_c96c51jf6wkvm\SystemAppData\wgs\</code>
+                    </div>
+                    <div class="bg-gray-700/30 p-3 rounded-lg">
+                        <p class="font-semibold text-gray-400 mb-1">Windows (General):</p>
+                        <code class="bg-gray-700 p-1 rounded-md break-all">%USERPROFILE%\AppData\LocalLow\Mobius Digital\Outer Wilds\Saves\</code>
+                    </div>
+                    <div class="bg-gray-700/30 p-3 rounded-lg">
+                        <p class="font-semibold text-gray-400 mb-1">Steam:</p>
+                        <code class="bg-gray-700 p-1 rounded-md break-all">%USERPROFILE%\AppData\LocalLow\Mobius Digital\Outer Wilds\SteamSaves\</code>
+                    </div>
+                    <div class="bg-gray-700/30 p-3 rounded-lg">
+                        <p class="font-semibold text-gray-400 mb-1">Steam Play (Linux):</p>
+                        <code class="bg-gray-700 p-1 rounded-md break-all">/steamapps/compatdata/753640/pfx/</code>
+                    </div>
+                </div>
             </div>
         </section>
         
