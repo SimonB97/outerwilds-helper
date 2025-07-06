@@ -15,9 +15,9 @@ Upload your `.owsave` binary file to see:
 
 ## 📄 Supported File Formats
 
-- **Binary Save Files**: .NET binary serialized `.owsave` files (detection implemented)
+- **Binary Save Files**: .NET binary serialized `.owsave` files (fully supported)
 - **File Format Detection**: Automatically detects .NET serialization markers
-- **Error Handling**: Clear messages for unsupported formats
+- **Binary Parsing**: Extracts game progress, ship logs, and story milestones from save files
 
 ## 🎮 How to use it
 
