@@ -6,12 +6,18 @@ Upload your save file and see how much of the solar system you've explored! 🌌
 
 ## ✨ What it does
 
-Upload your `.owsave` file to see:
+Upload your `.owsave` binary file to see:
 - Your exploration progress across all planets
 - Ship log entries you've discovered  
 - Story milestones and character interactions
 - Major locations you've found
 - Built-in spoiler protection to keep surprises intact
+
+## 📄 Supported File Formats
+
+- **Binary Save Files**: .NET binary serialized `.owsave` files (detection implemented)
+- **File Format Detection**: Automatically detects .NET serialization markers
+- **Error Handling**: Clear messages for unsupported formats
 
 ## 🎮 How to use it
 
