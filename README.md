@@ -29,19 +29,13 @@ Upload your `.owsave` file to see:
 
 3. **Explore your progress** - Toggle spoilers on/off and see what you've discovered!
 
-## 🛠️ For developers
-
-Want to run it locally? Just clone this repo and open `index.html` in your browser! No build process needed.
-
-Or serve it with: `python3 -m http.server 8000`
-
 ## 🐛 Found a bug?
 
-This tool is still being improved! If you find issues or have ideas for features, please:
+If you find issues or have ideas for features, please:
 - [Open an issue](../../issues) to report bugs
 - [Create a pull request](../../pulls) to contribute fixes
 
-Your help makes this tool better for everyone! 🚀
+Your help makes this tool better for everyone!
 
 ## 🔒 Privacy
 
