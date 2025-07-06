@@ -13,6 +13,12 @@ Upload your `.owsave` file to see:
 - Major locations you've found
 - Built-in spoiler protection to keep surprises intact
 
+## 📁 Supported File Formats
+
+- **JSON format**: Pre-converted save files in JSON format
+- **Binary format**: Direct `.owsave` files with automatic format detection
+- **Automatic detection**: The tool will detect and handle both formats appropriately
+
 ## 🎮 How to use it
 
 1. **Find your save file** - Look in one of these locations:

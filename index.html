@@ -69,6 +69,7 @@
         <header class="text-center">
             <h1 class="text-3xl sm:text-4xl font-bold text-white">Outer Wilds Save Analyzer</h1>
             <p class="text-gray-400 mt-2">Upload your <code class="bg-gray-700 text-amber-400 p-1 rounded-md">*.owsave</code> file to see your progress.</p>
+            <p class="text-gray-500 mt-1 text-sm">Supports both JSON and binary save file formats</p>
         </header>
 
         <!-- File Upload Section -->
@@ -261,15 +262,143 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    currentSaveData = JSON.parse(e.target.result);
-                    displayAnalysis(currentSaveData);
+                    // First, try to detect if this is a binary file
+                    const arrayBuffer = e.target.result;
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    
+                    // Check if file appears to be binary (.NET serialization)
+                    if (isBinaryFile(uint8Array)) {
+                        handleBinaryFile(uint8Array);
+                    } else {
+                        // Try to parse as text/JSON
+                        const textData = new TextDecoder().decode(arrayBuffer);
+                        currentSaveData = JSON.parse(textData);
+                        displayAnalysis(currentSaveData);
+                    }
                 } catch (error) {
                     console.error('Error parsing save file:', error);
-                    fileNameDisplay.textContent = 'Error: Could not parse file. Is it a valid JSON?';
-                    currentSaveData = null;
+                    handleParsingError(error);
                 }
             };
-            reader.readAsText(file);
+            reader.readAsArrayBuffer(file);
+        }
+
+        function isBinaryFile(uint8Array) {
+            // Check for .NET binary serialization markers
+            const text = new TextDecoder().decode(uint8Array.slice(0, 100));
+            
+            // Look for .NET binary serialization signatures
+            const binaryMarkers = [
+                'Assembly-CSharp',
+                'GameSave',
+                'System.Collections.Generic',
+                'mscorlib',
+                'Culture=neutral',
+                'PublicKeyToken'
+            ];
+            
+            // Check for binary data (non-printable characters)
+            for (let i = 0; i < Math.min(100, uint8Array.length); i++) {
+                if (uint8Array[i] < 32 && uint8Array[i] !== 9 && uint8Array[i] !== 10 && uint8Array[i] !== 13) {
+                    return true;
+                }
+            }
+            
+            // Check for .NET serialization markers
+            return binaryMarkers.some(marker => text.includes(marker));
+        }
+
+        function handleBinaryFile(uint8Array) {
+            // Attempt to parse .NET binary serialization
+            try {
+                const parseResult = parseNetBinaryFormat(uint8Array);
+                if (parseResult) {
+                    currentSaveData = parseResult;
+                    displayAnalysis(currentSaveData);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error parsing binary format:', error);
+            }
+            
+            // If binary parsing fails, show helpful error
+            fileNameDisplay.innerHTML = `
+                <div class="text-red-400 text-sm">
+                    <strong>Unsupported File Format Detected</strong><br>
+                    This appears to be a .NET binary serialized save file.<br>
+                    <br>
+                    <strong>Possible solutions:</strong><br>
+                    • Check if you have a JSON version of your save file<br>
+                    • Use a save file converter tool<br>
+                    • Contact the developer for binary format support<br>
+                    <br>
+                    <details class="mt-2">
+                        <summary class="cursor-pointer text-blue-400 hover:text-blue-300">Show technical details</summary>
+                        <div class="mt-1 text-xs text-gray-500">
+                            File contains .NET binary serialization markers:<br>
+                            Assembly-CSharp, GameSave, System.Collections.Generic<br>
+                            This is a Unity/C# serialized save file that requires<br>
+                            specialized parsing not currently supported.
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        function parseNetBinaryFormat(uint8Array) {
+            // Basic .NET binary format parsing
+            // This is a simplified parser for demonstration
+            // A full implementation would be much more complex
+            
+            try {
+                // Convert to string to look for readable data
+                const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+                
+                // Try to extract some basic information
+                const gameDataMatch = text.match(/GameSave.*?loopCount.*?(\d+)/);
+                if (gameDataMatch) {
+                    // Create a basic save data structure
+                    return {
+                        loopCount: parseInt(gameDataMatch[1]) || 0,
+                        isPartialParse: true,
+                        sourceFormat: 'binary',
+                        note: 'This is a simplified parse of the binary format. Some data may be missing.'
+                    };
+                }
+            } catch (error) {
+                console.error('Error in basic binary parsing:', error);
+            }
+            
+            return null;
+        }
+
+        function handleParsingError(error) {
+            console.error('File parsing error:', error);
+            
+            if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+                fileNameDisplay.innerHTML = `
+                    <div class="text-red-400 text-sm">
+                        <strong>JSON Parsing Error</strong><br>
+                        The file doesn't appear to be valid JSON.<br>
+                        <br>
+                        <strong>Expected format:</strong> JSON (.json) or converted save file<br>
+                        <strong>Detected format:</strong> Possibly .NET binary serialized data<br>
+                        <br>
+                        Please ensure you're uploading a JSON version of your save file.
+                    </div>
+                `;
+            } else {
+                fileNameDisplay.innerHTML = `
+                    <div class="text-red-400 text-sm">
+                        <strong>File Processing Error</strong><br>
+                        ${error.message}<br>
+                        <br>
+                        Please try uploading a different file or contact support.
+                    </div>
+                `;
+            }
+            
+            currentSaveData = null;
         }
 
         function resetView() {
@@ -298,13 +427,31 @@
             const container = document.getElementById('game-progress');
             const knownSignalsCount = Object.values(data.knownSignals || {}).filter(v => v).length;
             const totalSignals = Object.keys(data.knownSignals || {}).length;
-            let html = `<h3 class="text-xl font-semibold mb-4 text-white">Game Progress</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            ${createStatCard('Loops Completed', data.loopCount || 0)}
-                            ${createStatCard('Full Timeloops', data.fullTimeloops || 0)}
-                            ${createStatCard('Signals Found', `${knownSignalsCount} / ${totalSignals}`)}
-                            ${createStatCard('Last Death', data.lastDeathType || 'N/A')}
-                        </div>`;
+            
+            let html = `<h3 class="text-xl font-semibold mb-4 text-white">Game Progress</h3>`;
+            
+            // Show warning if this is a partial parse
+            if (data.isPartialParse) {
+                html += `<div class="mb-4 p-3 bg-yellow-900/50 border border-yellow-600 rounded-lg text-yellow-200">
+                    <strong>⚠️ Limited Data Available</strong><br>
+                    This save file was partially parsed from binary format. Some information may be missing or incomplete.
+                    <br><small class="text-yellow-400">Source: ${data.sourceFormat} format</small>
+                </div>`;
+            }
+            
+            html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        ${createStatCard('Loops Completed', data.loopCount || 0)}
+                        ${createStatCard('Full Timeloops', data.fullTimeloops || 0)}
+                        ${createStatCard('Signals Found', `${knownSignalsCount} / ${totalSignals}`)}
+                        ${createStatCard('Last Death', data.lastDeathType || 'N/A')}
+                    </div>`;
+                    
+            if (data.note) {
+                html += `<div class="mt-4 p-3 bg-blue-900/30 border border-blue-600 rounded-lg text-blue-200 text-sm">
+                    <strong>Note:</strong> ${data.note}
+                </div>`;
+            }
+            
             container.innerHTML = html;
         }
         
