@@ -37,6 +37,11 @@ If you find issues or have ideas for features, please:
 
 Your help makes this tool better for everyone!
 
+## 📁 Supported File Formats
+
+- **Binary Save Files**: .NET binary serialized `.owsave` files (native game format)
+- **File Format Detection**: Automatic detection of .NET binary serialization markers
+
 ## 🔒 Privacy
 
 Everything happens in your browser - no files are uploaded anywhere!
