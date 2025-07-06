@@ -294,9 +294,7 @@
         }
 
         function parseBinaryData(arrayBuffer) {
-            // Basic binary parsing implementation for .NET serialized save files
-            // This is a simplified parser for the specific save file format
-            
+            // Enhanced binary parsing implementation for .NET serialized save files
             const uint8Array = new Uint8Array(arrayBuffer);
             const decoder = new TextDecoder('utf-8', { fatal: false });
             const text = decoder.decode(uint8Array);
@@ -308,50 +306,223 @@
                 knownSignals: {},
                 dictConditions: {},
                 shipLogFactSaves: {},
-                lastDeathType: 'Unknown'
+                lastDeathType: 'Unknown',
+                burnedMarshmallowEaten: false,
+                perfectMarshmallowsEaten: 0,
+                warpedToTheEye: false,
+                secondsRemainingOnWarp: 0,
+                loopCountOnParadox: 0
             };
             
-            // Try to extract basic information from the binary data
-            // This is a simplified approach - full .NET binary parsing would be much more complex
-            
-            // Look for numeric values that might be loop counts
+            // Extract numeric values using improved parsing
             const loopMatch = text.match(/loopCount[^\d]*(\d+)/);
             if (loopMatch) {
                 saveData.loopCount = parseInt(loopMatch[1]);
             }
             
-            // Look for death type information
+            const fullTimeloopsMatch = text.match(/fullTimeloops[^\d]*(\d+)/);
+            if (fullTimeloopsMatch) {
+                saveData.fullTimeloops = parseInt(fullTimeloopsMatch[1]);
+            }
+            
+            const marshmallowMatch = text.match(/perfectMarshmallowsEaten[^\d]*(\d+)/);
+            if (marshmallowMatch) {
+                saveData.perfectMarshmallowsEaten = parseInt(marshmallowMatch[1]);
+            }
+            
+            const warpSecondsMatch = text.match(/secondsRemainingOnWarp[^\d]*(\d+)/);
+            if (warpSecondsMatch) {
+                saveData.secondsRemainingOnWarp = parseInt(warpSecondsMatch[1]);
+            }
+            
+            const paradoxLoopMatch = text.match(/loopCountOnParadox[^\d]*(\d+)/);
+            if (paradoxLoopMatch) {
+                saveData.loopCountOnParadox = parseInt(paradoxLoopMatch[1]);
+            }
+            
+            // Extract death type information
             const deathMatch = text.match(/DeathType[^\w]*(\w+)/);
             if (deathMatch) {
                 saveData.lastDeathType = deathMatch[1];
             }
             
-            // Add some placeholder conditions and signals to show the UI works
-            saveData.dictConditions = {
-                'HAS_USED_JETPACK': true,
-                'HAS_USED_SHIPLOG': true,
-                'LAUNCH_CODES_GIVEN': true,
-                'MET_RIEBECK': true,
-                'TALKED_TO_GABBRO': true
-            };
+            // Extract boolean flags
+            saveData.burnedMarshmallowEaten = text.includes('burnedMarshmallowEaten') && extractBooleanValue(text, 'burnedMarshmallowEaten');
+            saveData.warpedToTheEye = text.includes('warpedToTheEye') && extractBooleanValue(text, 'warpedToTheEye');
             
-            // Add some placeholder ship log entries
-            saveData.shipLogFactSaves = {
-                'TH_VILLAGE_X1': { read: true, newlyRevealed: false },
-                'TH_VILLAGE_X2': { read: true, newlyRevealed: false },
-                'TH_ZERO_G_CAVE_X1': { read: true, newlyRevealed: false },
-                'ET_CHERTS_CAMP_X1': { read: true, newlyRevealed: false },
-                'BH_RIEBECKS_CAMP_X1': { read: true, newlyRevealed: false }
-            };
+            // Parse dictConditions - extract game state flags
+            const conditions = [
+                'HAS_USED_JETPACK', 'LAUNCH_CODES_GIVEN', 'FromGiantsDeep', 'HAS_USED_SHIPLOG',
+                'HAS_USED_MAP', 'HAS_PLAYER_LOCKED_ON', 'TM_MOON_CRATER_X1', 'HAS_TAKEN_HANDHELD_SNAPSHOT',
+                'HAS_USED_TRANSLATOR', 'HAS_AIMED_TRANSLATOR', 'HAS_RETRIEVED_PROBE', 'DEATH_SUPERNOVA',
+                'HAS_ROTATED_PROBE_CAMERA', 'SUIT_BOOSTER_FIRED', 'HAS_TAKEN_MIDAIR_SNAPSHOT',
+                'THERE_IS_BUT_VOID', 'FLEW_TO_SS', 'PLAYER_ENTERED_TIMELOOPCORE', 'PROBE_ENTERED_TIMELOOPCORE',
+                'ChertFirstContact', 'DESTROYED_TIMELINE_LAST_SAVE', 'TALKED_TO_GABBRO', 'GABBRO_MERGE_TRIGGERED',
+                'KNOWS_MEDITATION', 'KILLED_BY_SUN', 'MET_RIEBECK', 'MET_SOLANUM', 'MetFeldspar'
+            ];
             
-            // Add placeholder signals
-            saveData.knownSignals = {
-                'Travelers': true,
-                'Quantum': true,
-                'Default': true
-            };
+            for (const condition of conditions) {
+                if (text.includes(condition)) {
+                    // Check if the condition appears to be set to true in the binary data
+                    const conditionIndex = text.indexOf(condition);
+                    if (conditionIndex !== -1) {
+                        // Look for a boolean value near the condition name
+                        const nearbyData = text.substring(conditionIndex, conditionIndex + 50);
+                        saveData.dictConditions[condition] = extractBooleanValue(nearbyData, condition);
+                    }
+                }
+            }
+            
+            // Parse shipLogFactSaves - extract ship log entries
+            // The save file uses different naming conventions, so we need to map them properly
+            const shipLogEntries = Object.keys(shipLogMapping);
+            
+            // Also check for entries directly mentioned in the save file
+            const saveFileEntries = [
+                'S_SUNSTATION_R1', 'S_SUNSTATION_R2', 'S_SUNSTATION_R3', 'S_SUNSTATION_X1', 'S_SUNSTATION_X2', 'S_SUNSTATION_X3', 'S_SUNSTATION_X4',
+                'CT_CHERT_X1', 'CT_CHERT_X2', 'CT_CHERT_X3', 'CT_CHERT_X4', 'CT_CHERT_X5',
+                'CT_QUANTUM_MOON_LOCATOR_X1', 'CT_QUANTUM_MOON_LOCATOR_X2', 'CT_QUANTUM_MOON_LOCATOR_X3',
+                'CT_GRAVITY_CANNON_R1', 'CT_GRAVITY_CANNON_X1', 'CT_GRAVITY_CANNON_X2',
+                'CT_ESCAPE_POD_R1', 'CT_ESCAPE_POD_R2', 'CT_ESCAPE_POD_X1', 'CT_ESCAPE_POD_X2',
+                'CT_HIGH_ENERGY_LAB_R1', 'CT_HIGH_ENERGY_LAB_R2', 'CT_HIGH_ENERGY_LAB_R3',
+                'CT_HIGH_ENERGY_LAB_X1', 'CT_HIGH_ENERGY_LAB_X2', 'CT_HIGH_ENERGY_LAB_X3',
+                'CT_WARP_TOWER_MAP_R1', 'CT_WARP_TOWER_MAP_X1', 'CT_WARP_TOWER_MAP_X2', 'CT_WARP_TOWER_MAP_X3', 'CT_WARP_TOWER_MAP_X4',
+                'CT_SUNLESS_CITY_R1', 'CT_SUNLESS_CITY_R2', 'CT_SUNLESS_CITY_R3', 'CT_SUNLESS_CITY_R4', 'CT_SUNLESS_CITY_R5',
+                'CT_SUNLESS_CITY_X1', 'CT_SUNLESS_CITY_X2', 'CT_SUNLESS_CITY_X3',
+                'CT_ANGLERFISH_FOSSIL_R1', 'CT_ANGLERFISH_FOSSIL_R2', 'CT_ANGLERFISH_FOSSIL_R3', 'CT_ANGLERFISH_FOSSIL_R4',
+                'CT_ANGLERFISH_FOSSIL_X1', 'CT_ANGLERFISH_FOSSIL_X2', 'CT_ANGLERFISH_FOSSIL_X3',
+                'CT_QUANTUM_CAVES_R1', 'CT_QUANTUM_CAVES_X1', 'CT_QUANTUM_CAVES_X2',
+                'CT_LAKEBED_CAVERN_R1', 'CT_LAKEBED_CAVERN_R2', 'CT_LAKEBED_CAVERN_X1', 'CT_LAKEBED_CAVERN_X2', 'CT_LAKEBED_CAVERN_X3',
+                'TT_WARP_TOWERS_X1', 'TT_WARP_TOWERS_X2',
+                'TT_TIME_LOOP_DEVICE_R1', 'TT_TIME_LOOP_DEVICE_R2', 'TT_TIME_LOOP_DEVICE_R3', 'TT_TIME_LOOP_DEVICE_R4',
+                'TT_TIME_LOOP_DEVICE_X1', 'TT_TIME_LOOP_DEVICE_X2', 'TT_TIME_LOOP_DEVICE_X3', 'TT_TIME_LOOP_DEVICE_X4', 'TT_TIME_LOOP_DEVICE_X5',
+                'TH_VILLAGE_X1', 'TH_VILLAGE_X2', 'TH_VILLAGE_X3',
+                'TH_ZERO_G_CAVE_R1', 'TH_ZERO_G_CAVE_X1', 'TH_ZERO_G_CAVE_X2',
+                'TH_IMPACT_CRATER_R1', 'TH_IMPACT_CRATER_X1', 'TH_IMPACT_CRATER_X2', 'TH_IMPACT_CRATER_X3',
+                'TH_NOMAI_MINE_R1', 'TH_NOMAI_MINE_X1', 'TH_NOMAI_MINE_X2', 'TH_NOMAI_MINE_X3',
+                'TH_QUANTUM_SHARD_R1', 'TH_QUANTUM_SHARD_R2', 'TH_QUANTUM_SHARD_X1', 'TH_QUANTUM_SHARD_X2',
+                'TM_ESKER_R1', 'TM_ESKER_X1',
+                'TM_NORTH_POLE_R1', 'TM_NORTH_POLE_X1',
+                'TM_EYE_LOCATOR_R1', 'TM_EYE_LOCATOR_R2', 'TM_EYE_LOCATOR_X1', 'TM_EYE_LOCATOR_X2',
+                'BH_RIEBECK_R1', 'BH_RIEBECK_R2', 'BH_RIEBECK_R3', 'BH_RIEBECK_R4',
+                'BH_RIEBECK_X1', 'BH_RIEBECK_X2',
+                'BH_GRAVITY_CANNON_X1', 'BH_GRAVITY_CANNON_X2',
+                'BH_QUANTUM_RESEARCH_TOWER_R1', 'BH_QUANTUM_RESEARCH_TOWER_R2',
+                'BH_QUANTUM_RESEARCH_TOWER_X1', 'BH_QUANTUM_RESEARCH_TOWER_X2', 'BH_QUANTUM_RESEARCH_TOWER_X3',
+                'BH_QUANTUM_SHARD_R1', 'BH_QUANTUM_SHARD_X1', 'BH_QUANTUM_SHARD_X2', 'BH_QUANTUM_SHARD_X3',
+                'BH_WARP_RECEIVER_X1', 'BH_WARP_RECEIVER_X2',
+                'BH_ESCAPE_POD_R1', 'BH_ESCAPE_POD_X1', 'BH_ESCAPE_POD_X2',
+                'BH_OLD_SETTLEMENT_R1', 'BH_OLD_SETTLEMENT_X1', 'BH_OLD_SETTLEMENT_X2', 'BH_OLD_SETTLEMENT_X3', 'BH_OLD_SETTLEMENT_X4',
+                'BH_MURAL_1_X1', 'BH_MURAL_2_X1', 'BH_MURAL_3_X1',
+                'BH_HANGING_CITY_R1', 'BH_HANGING_CITY_R2', 'BH_HANGING_CITY_X1', 'BH_HANGING_CITY_X2', 'BH_HANGING_CITY_X3', 'BH_HANGING_CITY_X4',
+                'BH_BLACK_HOLE_FORGE_R1', 'BH_BLACK_HOLE_FORGE_R2', 'BH_BLACK_HOLE_FORGE_R3', 'BH_BLACK_HOLE_FORGE_R4',
+                'BH_BLACK_HOLE_FORGE_X1', 'BH_BLACK_HOLE_FORGE_X3', 'BH_BLACK_HOLE_FORGE_X4', 'BH_BLACK_HOLE_FORGE_X5', 'BH_BLACK_HOLE_FORGE_X6',
+                'BH_WARP_ALIGNMENT_MAP_X1', 'BH_WARP_ALIGNMENT_MAP_X2', 'BH_WARP_ALIGNMENT_MAP_X3', 'BH_WARP_ALIGNMENT_MAP_X4',
+                'BH_OBSERVATORY_R1', 'BH_OBSERVATORY_R2', 'BH_OBSERVATORY_R3', 'BH_OBSERVATORY_R4',
+                'BH_OBSERVATORY_X1', 'BH_OBSERVATORY_X2', 'BH_OBSERVATORY_X3', 'BH_OBSERVATORY_X4',
+                'BH_TORNADO_SIMULATION_R1', 'BH_TORNADO_SIMULATION_X1', 'BH_TORNADO_SIMULATION_X2',
+                'VM_VOLCANO_X1', 'VM_VOLCANO_X2', 'VM_VOLCANO_X3',
+                'GD_OCEAN_R1', 'GD_OCEAN_R2', 'GD_OCEAN_R3', 'GD_OCEAN_X1', 'GD_OCEAN_X2',
+                'GD_GABBRO_ISLAND_R1', 'GD_GABBRO_ISLAND_X0', 'GD_GABBRO_ISLAND_X1', 'GD_GABBRO_ISLAND_X2', 'GD_GABBRO_ISLAND_X3',
+                'GD_CONSTRUCTION_YARD_R1', 'GD_CONSTRUCTION_YARD_X1', 'GD_CONSTRUCTION_YARD_X2', 'GD_CONSTRUCTION_YARD_X3',
+                'GD_BRAMBLE_ISLAND_X1',
+                'GD_STATUE_ISLAND_R1', 'GD_STATUE_ISLAND_R2', 'GD_STATUE_ISLAND_X1', 'GD_STATUE_ISLAND_X2',
+                'GD_STATUE_WORKSHOP_R1', 'GD_STATUE_WORKSHOP_R2', 'GD_STATUE_WORKSHOP_R3',
+                'GD_STATUE_WORKSHOP_X1', 'GD_STATUE_WORKSHOP_X2', 'GD_STATUE_WORKSHOP_X3',
+                'GD_QUANTUM_TOWER_R1', 'GD_QUANTUM_TOWER_X1', 'GD_QUANTUM_TOWER_X2', 'GD_QUANTUM_TOWER_X3', 'GD_QUANTUM_TOWER_X4',
+                'ORBITAL_PROBE_CANNON_R1', 'ORBITAL_PROBE_CANNON_R2', 'ORBITAL_PROBE_CANNON_R3', 'ORBITAL_PROBE_CANNON_R4',
+                'ORBITAL_PROBE_CANNON_X1', 'ORBITAL_PROBE_CANNON_X2', 'ORBITAL_PROBE_CANNON_X3',
+                'OPC_INTACT_MODULE_R1', 'OPC_INTACT_MODULE_X1', 'OPC_INTACT_MODULE_X2',
+                'OPC_BROKEN_MODULE_R1', 'OPC_BROKEN_MODULE_R2', 'OPC_BROKEN_MODULE_R3',
+                'OPC_BROKEN_MODULE_X1', 'OPC_BROKEN_MODULE_X2', 'OPC_BROKEN_MODULE_X3',
+                'OPC_SUNKEN_MODULE_R1', 'OPC_SUNKEN_MODULE_R2', 'OPC_SUNKEN_MODULE_R3', 'OPC_SUNKEN_MODULE_R4', 'OPC_SUNKEN_MODULE_R5',
+                'OPC_SUNKEN_MODULE_X1', 'OPC_SUNKEN_MODULE_X2', 'OPC_SUNKEN_MODULE_X3',
+                'OPC_EYE_COORDINATES_X1',
+                'DB_FELDSPAR_R1', 'DB_FELDSPAR_R2', 'DB_FELDSPAR_X1', 'DB_FELDSPAR_X2', 'DB_FELDSPAR_X3',
+                'DB_FROZEN_JELLYFISH_R1', 'DB_FROZEN_JELLYFISH_X1', 'DB_FROZEN_JELLYFISH_X2', 'DB_FROZEN_JELLYFISH_X3',
+                'DB_ESCAPE_POD_R1', 'DB_ESCAPE_POD_X1', 'DB_ESCAPE_POD_X2', 'DB_ESCAPE_POD_X3',
+                'DB_NOMAI_GRAVE_R1', 'DB_NOMAI_GRAVE_R2', 'DB_NOMAI_GRAVE_X1', 'DB_NOMAI_GRAVE_X2', 'DB_NOMAI_GRAVE_X3', 'DB_NOMAI_GRAVE_X4',
+                'DB_VESSEL_R1', 'DB_VESSEL_R2', 'DB_VESSEL_R3', 'DB_VESSEL_R4',
+                'DB_VESSEL_X1', 'DB_VESSEL_X2', 'DB_VESSEL_X3', 'DB_VESSEL_X4', 'DB_VESSEL_X5', 'DB_VESSEL_X6',
+                'WHS_R1', 'WHS_R2', 'WHS_R3', 'WHS_R4', 'WHS_X1', 'WHS_X2', 'WHS_X3', 'WHS_X4',
+                'COMET_SHUTTLE_X1', 'COMET_SHUTTLE_X2', 'COMET_SHUTTLE_X3', 'COMET_SHUTTLE_X4',
+                'COMET_INTERIOR_R1', 'COMET_INTERIOR_R2', 'COMET_INTERIOR_X1', 'COMET_INTERIOR_X2', 'COMET_INTERIOR_X3', 'COMET_INTERIOR_X4',
+                'QUANTUM_MOON_R1', 'QUANTUM_MOON_R2', 'QUANTUM_MOON_R3', 'QUANTUM_MOON_R4',
+                'QUANTUM_MOON_X1', 'QUANTUM_MOON_X2',
+                'QM_SHUTTLE_X1', 'QM_SHUTTLE_X2',
+                'QM_SHRINE_R1', 'QM_SHRINE_X1', 'QM_SHRINE_X2', 'QM_SHRINE_X3', 'QM_SHRINE_X4',
+                'QM_SIXTH_LOCATION_R1', 'QM_SIXTH_LOCATION_R2', 'QM_SIXTH_LOCATION_R3',
+                'QM_SIXTH_LOCATION_X1', 'QM_SIXTH_LOCATION_X2', 'QM_SIXTH_LOCATION_X3', 'QM_SIXTH_LOCATION_X4', 'QM_SIXTH_LOCATION_X5', 'QM_SIXTH_LOCATION_X6'
+            ];
+
+            // Check both the existing ship log entries and the ones from the save file
+            const allEntries = [...shipLogEntries, ...saveFileEntries];
+            
+            for (const entryId of allEntries) {
+                if (text.includes(entryId)) {
+                    const entryIndex = text.indexOf(entryId);
+                    if (entryIndex !== -1) {
+                        // Look for ShipLogFactSave data structure after the entry ID
+                        const afterEntryData = text.substring(entryIndex, entryIndex + 100);
+                        const isRead = extractBooleanValue(afterEntryData, 'read');
+                        const isNewlyRevealed = extractBooleanValue(afterEntryData, 'newlyRevealed');
+                        
+                        saveData.shipLogFactSaves[entryId] = {
+                            read: isRead,
+                            newlyRevealed: isNewlyRevealed
+                        };
+                    }
+                }
+            }
+            
+            // Parse knownSignals - extract frequency data
+            const signalFrequencies = [
+                'Travelers', 'Quantum', 'Default', 'Hide_and_Seek', 'Radio_Tower',
+                'Distress_Beacon', 'Museum', 'Probe', 'Nomai', 'Prisoner'
+            ];
+            
+            for (const signal of signalFrequencies) {
+                if (text.includes(signal)) {
+                    const signalIndex = text.indexOf(signal);
+                    if (signalIndex !== -1) {
+                        const nearbyData = text.substring(signalIndex, signalIndex + 50);
+                        saveData.knownSignals[signal] = extractBooleanValue(nearbyData, signal);
+                    }
+                }
+            }
             
             return saveData;
+        }
+        
+        function extractBooleanValue(text, key) {
+            // Look for boolean patterns in the binary data near the key
+            const keyIndex = text.indexOf(key);
+            if (keyIndex === -1) return false;
+            
+            // Look for common boolean representations in the surrounding area
+            const searchArea = text.substring(keyIndex, keyIndex + 50);
+            
+            // Check for various boolean indicators
+            if (searchArea.includes('true') || searchArea.includes('True')) return true;
+            if (searchArea.includes('false') || searchArea.includes('False')) return false;
+            
+            // For .NET binary serialization, often booleans are represented as single bytes
+            // Look for the + or - symbols that appear in the save file data
+            if (searchArea.includes('+')) return true;
+            if (searchArea.includes('-')) return false;
+            
+            // Check for binary boolean patterns (common in .NET serialization)
+            // Look for byte patterns that might indicate true/false
+            const uint8Array = new Uint8Array(new TextEncoder().encode(searchArea));
+            for (let i = 0; i < uint8Array.length - 1; i++) {
+                // Check for common boolean byte patterns
+                if (uint8Array[i] === 0x01 || uint8Array[i] === 0xFF) return true;
+                if (uint8Array[i] === 0x00 && uint8Array[i + 1] !== 0x00) return false;
+            }
+            
+            // If key is found but no clear boolean pattern, assume true
+            // This is common in .NET serialization where presence often indicates true
+            return true;
         }
 
         function resetView() {
