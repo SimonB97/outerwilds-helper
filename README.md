@@ -4,8 +4,6 @@ Upload your save file and see how much of the solar system you've explored! 🌌
 
 🔗 **[Try it now!](https://simonb97.github.io/outerwilds-helper/)**
 
-![Outer Wilds Save Analyzer Interface](https://github.com/user-attachments/assets/6f5ada44-7782-4963-8fac-76f9ffc8e419)
-
 ## ✨ What it does
 
 Upload your `.owsave` file to see:
